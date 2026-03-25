@@ -2,200 +2,336 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шашки Online Fix</title>
-    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Checkers Ultimate Online</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #1a1a1a; --board-700: #45a049; --board-100: #f0f0f0; --gold: #ffd700; }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        
-        /* Экраны */
-        #screen-menu, #screen-game { width: 100%; display: flex; flex-direction: column; align-items: center; }
-        #screen-game { display: none; }
-
-        /* Меню */
-        .card { background: #2a2a2a; padding: 25px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); text-align: center; width: 280px; }
-        .btn { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: var(--gold); color: #000; transition: 0.2s; }
-        .btn:active { transform: scale(0.98); }
-        .btn-gray { background: #444; color: #fff; }
-        input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #555; background: #1a1a1a; color: #fff; text-align: center; }
-
-        /* Доска */
-        #board { 
-            display: grid; grid-template-columns: repeat(8, 1fr); 
-            width: 340px; height: 340px; border: 5px solid #333; 
+        :root {
+            --bg: #0b0f1a; --card: #161b2c; --accent: #10b981;
+            --white-cell: #f8fafc; --black-cell: #2d3748; --gold: #f59e0b;
+            --danger: #ef4444; --blue: #3b82f6; --text: #ffffff;
         }
-        .cell { display: flex; justify-content: center; align-items: center; }
-        .dark { background: #386641; }
-        .light { background: #f2e8cf; }
-        
-        .piece { width: 85%; height: 85%; border-radius: 50%; position: relative; box-shadow: 0 4px 2px rgba(0,0,0,0.4); }
-        .white { background: #ffffff; border: 1px solid #999; }
-        .black { background: #121212; border: 1px solid #444; }
-        .king::after { content: 'K'; color: var(--gold); font-weight: bold; position: absolute; left: 35%; top: 20%; }
-        
-        .hl { background: rgba(255, 215, 0, 0.5) !important; cursor: pointer; border: 2px inset gold; }
-        #status-bar { margin: 15px; font-weight: bold; letter-spacing: 1px; }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+
+        /* --- UI: Уведомления и Диалоги --- */
+        #toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
+            background: var(--card); border: 2px solid var(--accent); padding: 12px 25px;
+            border-radius: 15px; z-index: 10000; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 10px;
+        }
+        #toast.active { transform: translateX(-50%) translateY(0); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 9999; display: none;
+            align-items: center; justify-content: center; backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: var(--card); padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; border: 1px solid #ffffff10; }
+
+        /* --- Экраны --- */
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 20px; text-align: center; }
+        .screen.active { display: flex; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card { background: var(--card); border-radius: 24px; padding: 30px; width: 100%; max-width: 380px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        h1 { font-size: 1.8rem; margin-bottom: 25px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+
+        /* --- Ввод и Кнопки --- */
+        input { width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #2d3748; background: #000; color: #fff; margin-bottom: 20px; text-align: center; font-size: 1.1rem; outline: none; }
+        input:focus { border-color: var(--accent); }
+        .btn { 
+            width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 800; 
+            cursor: pointer; transition: 0.2s; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-main { background: var(--accent); color: #064e3b; }
+        .btn-sub { background: #2d3748; color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn:active { transform: scale(0.95); }
+
+        /* --- Список Игроков --- */
+        #player-list { height: 220px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; margin: 15px 0; border: 1px solid #2d3748; }
+        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #2d3748; }
+        .online-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 8px var(--accent); }
+
+        /* --- Игровое Поле --- */
+        #board { display: grid; grid-template-columns: repeat(8, 1fr); width: 90vw; height: 90vw; max-width: 420px; max-height: 420px; border: 5px solid #1e293b; border-radius: 10px; }
+        .cell { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .cell.w { background: var(--white-cell); }
+        .cell.b { background: var(--black-cell); }
+        .piece { width: 85%; height: 85%; border-radius: 50%; cursor: pointer; transition: 0.2s; }
+        .p-white { background: #fff; border: 2px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .p-black { background: #1a1a1a; border: 2px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+        .king::after { content: '👑'; font-size: 1.2rem; display: block; text-align: center; line-height: 100%; }
+        .selected { transform: scale(1.1); box-shadow: 0 0 15px var(--gold); border: 3px solid var(--gold) !important; z-index: 5; }
+        .hint { width: 30%; height: 30%; background: rgba(16, 185, 129, 0.5); border-radius: 50%; cursor: pointer; }
+
+        #fs-btn { position: fixed; bottom: 20px; right: 20px; z-index: 1000; width: 45px; height: 45px; background: var(--card); border: 1px solid var(--accent); border-radius: 12px; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="screen-menu">
-        <div class="card">
-            <h1 style="color:var(--gold)">SHASHKI AI/NET</h1>
-            <button class="btn" onclick="startLocal('bot')">ИГРАТЬ С БОТОМ</button>
-            <hr style="border:0.5px solid #444; margin:15px 0;">
-            <div id="my-id-box">Загрузка ID...</div>
-            <input type="text" id="join-id" placeholder="ID соперника">
-            <button class="btn btn-gray" onclick="connectToFriend()">ПОДКЛЮЧИТЬСЯ</button>
+    <div id="toast"><span>🎮</span><span id="t-msg"></span></div>
+
+    <div id="modal-exit" class="modal-overlay">
+        <div class="modal-card">
+            <h3>Покинуть игру?</h3>
+            <p style="margin: 15px 0; opacity: 0.7;">Прогресс текущей партии будет сброшен.</p>
+            <button class="btn btn-danger" onclick="confirmExit()">Выйти в меню</button>
+            <button class="btn btn-sub" style="margin:0" onclick="closeModals()">Отмена</button>
         </div>
     </div>
 
-    <div id="screen-game">
-        <div id="status-bar">ОЖИДАНИЕ...</div>
+    <div id="modal-invite" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="invite-nick">Игрок вызывает вас!</h3>
+            <p style="margin: 15px 0;">Принять вызов на партию в шашки?</p>
+            <button class="btn btn-main" onclick="acceptInvite()">Принять</button>
+            <button class="btn btn-danger" style="margin:0" onclick="rejectInvite()">Отклонить</button>
+        </div>
+    </div>
+
+    <button id="fs-btn" onclick="toggleFS()">⛶</button>
+
+    <div id="scr-auth" class="screen active">
+        <div class="card">
+            <h1>CHECKERS ONLINE</h1>
+            <input type="text" id="nick-input" placeholder="Введите никнейм" maxlength="12">
+            <button class="btn btn-main" onclick="startApp()">Войти в систему</button>
+        </div>
+    </div>
+
+    <div id="scr-menu" class="screen">
+        <div class="card">
+            <h1>Меню</h1>
+            <button class="btn btn-main" onclick="startLocal()">Играть вдвоем</button>
+            <button class="btn btn-sub" onclick="showScreen('scr-bot')">Против бота</button>
+            <button class="btn btn-sub" style="background:var(--blue)" onclick="openLobby()">Онлайн список</button>
+        </div>
+    </div>
+
+    <div id="scr-bot" class="screen">
+        <div class="card">
+            <h1>Уровни Бота</h1>
+            <button class="btn btn-sub" onclick="startBot(1)">1. Новичок</button>
+            <button class="btn btn-sub" onclick="startBot(2)">2. Ученик</button>
+            <button class="btn btn-sub" onclick="startBot(3)">3. Мастер</button>
+            <button class="btn btn-sub" onclick="startBot(4)">4. Профи</button>
+            <button class="btn btn-danger" onclick="startBot(5)">5. Ультра</button>
+            <button class="btn btn-sub" style="margin-top:15px" onclick="showScreen('scr-menu')">Назад</button>
+        </div>
+    </div>
+
+    <div id="scr-lobby" class="screen">
+        <div class="card">
+            <h1>Игроки в сети</h1>
+            <div id="player-list"></div>
+            <button class="btn btn-sub" onclick="showScreen('scr-menu')">Назад</button>
+        </div>
+    </div>
+
+    <div id="scr-game" class="screen">
+        <div id="turn-indicator" style="font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; color: var(--accent);">ХОД БЕЛЫХ</div>
         <div id="board"></div>
-        <button class="btn btn-gray" style="width:120px; margin-top:20px;" onclick="location.reload()">В МЕНЮ</button>
+        <button class="btn btn-danger" style="margin-top: 30px; width: 180px;" onclick="openExitModal()">Выйти</button>
     </div>
 
     <script>
-        let board = [], selected = null, turn = 'white';
-        let mode = 'bot', myColor = 'white', peer, conn;
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFJQ4OKKStxVW7gUj1lS4KHwxGc1_QIwg",
+            authDomain: "mymobilegame-b5e68.firebaseapp.com",
+            projectId: "mymobilegame-b5e68",
+            databaseURL: "https://mymobilegame-b5e68-default-rtdb.firebaseio.com",
+            storageBucket: "mymobilegame-b5e68.firebasestorage.app",
+            messagingSenderId: "137334852741",
+            appId: "1:137334852741:web:7f1be97afce766c011edec"
+        };
 
-        // 1. Сетевая логика
-        peer = new Peer();
-        peer.on('open', id => document.getElementById('my-id-box').innerHTML = `Твой ID: <b style="color:var(--gold)">${id}</b>`);
-        
-        peer.on('connection', c => {
-            conn = c;
-            mode = 'net';
-            myColor = 'white'; // Хост всегда белые
-            initNetHandlers();
-            switchScreen();
-        });
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let myNick = "", myID = "", peer = null, conn = null, opponentID = null;
+        let board = [], selected = null, turn = 'white', gameMode = 'local', botLevel = 1;
 
-        function connectToFriend() {
-            const targetId = document.getElementById('join-id').value;
-            if(!targetId) return alert("Введи ID!");
-            conn = peer.connect(targetId);
-            mode = 'net';
-            myColor = 'black'; // Клиент всегда черные
-            initNetHandlers();
-            switchScreen();
+        function notify(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('t-msg').innerText = msg;
+            t.classList.add('active');
+            setTimeout(() => t.classList.remove('active'), 3000);
         }
 
-        function initNetHandlers() {
+        function toggleFS() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function openExitModal() { document.getElementById('modal-exit').classList.add('active'); }
+        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+        function confirmExit() { closeModals(); showScreen('scr-menu'); if(db && myID) db.ref('players/' + myID).update({status: 'online'}); }
+
+        // --- Auth & Lobby ---
+        function startApp() {
+            myNick = document.getElementById('nick-input').value.trim();
+            if(!myNick) return notify("Введите ваш ник!");
+            showScreen('scr-menu');
+            
+            peer = new Peer('ch-' + Math.random().toString(36).substr(2, 6));
+            peer.on('open', id => {
+                myID = id;
+                db.ref('players/' + id).set({ nick: myNick, id: id, status: 'online' });
+                db.ref('players/' + id).onDisconnect().remove();
+            });
+
+            peer.on('connection', c => {
+                conn = c;
+                opponentID = c.peer;
+                conn.on('data', handleData);
+            });
+        }
+
+        function openLobby() {
+            showScreen('scr-lobby');
+            const list = document.getElementById('player-list');
+            db.ref('players').on('value', snap => {
+                list.innerHTML = '';
+                snap.forEach(child => {
+                    const p = child.val();
+                    if(p.id === myID) return;
+                    const row = document.createElement('div');
+                    row.className = 'player-row';
+                    row.innerHTML = `<span><span class="online-dot"></span>${p.nick}</span>
+                                     <button class="btn btn-main" style="width:auto; padding:5px 15px;" onclick="sendInvite('${p.id}')">Вызвать</button>`;
+                    list.appendChild(row);
+                });
+            });
+        }
+
+        function sendInvite(id) {
+            notify("Вызов отправлен...");
+            const tempConn = peer.connect(id);
+            tempConn.on('open', () => {
+                tempConn.send({type: 'invite', fromNick: myNick, fromID: myID});
+            });
+        }
+
+        function handleData(data) {
+            if(data.type === 'invite') {
+                opponentID = data.fromID;
+                document.getElementById('invite-nick').innerText = data.fromNick + " вызывает вас!";
+                document.getElementById('modal-invite').classList.add('active');
+            }
+            if(data.type === 'accept') {
+                notify("Вызов принят!");
+                startGame('online', 'white');
+            }
+            if(data.type === 'move') {
+                executeMove(data.fr, data.fc, data.tr, data.tc, data.cap, false);
+            }
+        }
+
+        function acceptInvite() {
+            closeModals();
+            conn = peer.connect(opponentID);
             conn.on('open', () => {
-                console.log("Connected!");
-                initBoard();
+                conn.send({type: 'accept'});
+                startGame('online', 'black');
             });
-            conn.on('data', data => {
-                executeMove(data.f, data.t, data.c);
-                render();
-            });
+            conn.on('data', handleData);
         }
 
-        // 2. Логика игры
-        function startLocal(m) {
-            mode = m;
-            switchScreen();
+        function rejectInvite() { closeModals(); }
+
+        // --- Game Core ---
+        function startLocal() { startGame('local', 'white'); }
+        function startBot(lvl) { botLevel = lvl; startGame('bot', 'white'); }
+
+        function startGame(m, color) {
+            gameMode = m; turn = 'white';
+            showScreen('scr-game');
             initBoard();
-        }
-
-        function switchScreen() {
-            document.getElementById('screen-menu').style.display = 'none';
-            document.getElementById('screen-game').style.display = 'flex';
         }
 
         function initBoard() {
             board = Array(8).fill().map(() => Array(8).fill(null));
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if ((r + c) % 2 !== 0) {
-                        if (r < 3) board[r][c] = { color: 'black', king: false };
-                        if (r > 4) board[r][c] = { color: 'white', king: false };
-                    }
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+                if((r+c)%2 !== 0) {
+                    if(r<3) board[r][c] = {color:'black', king:false};
+                    if(r>4) board[r][c] = {color:'white', king:false};
                 }
             }
             render();
         }
 
         function render() {
-            const bEl = document.getElementById('board');
-            bEl.innerHTML = '';
-            document.getElementById('status-bar').innerText = `ХОД: ${turn === 'white' ? 'БЕЛЫХ' : 'ЧЕРНЫХ'} ${mode==='net' ? (turn===myColor ? '(ТВОЙ)' : '(ЖДИ)') : ''}`;
-
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = `cell ${(r+c)%2===0 ? 'light' : 'dark'}`;
-                    const p = board[r][c];
-                    
-                    if (p) {
-                        const div = document.createElement('div');
-                        div.className = `piece ${p.color} ${p.king ? 'king' : ''}`;
-                        if (p.color === turn) {
-                            if (mode === 'bot' || turn === myColor) div.onclick = () => { selected = {r,c}; render(); };
-                        }
-                        cell.appendChild(div);
-                    }
-                    
-                    if (selected && checkMove(selected.r, selected.c, r, c)) {
-                        cell.classList.add('hl');
-                        cell.onclick = () => {
-                            let cap = Math.abs(r - selected.r) === 2 ? { r: (r+selected.r)/2, c: (c+selected.c)/2 } : null;
-                            if (mode === 'net') conn.send({ f: [selected.r, selected.c], t: [r, c], c: cap });
-                            executeMove([selected.r, selected.c], [r, c], cap);
-                            render();
-                        };
-                    }
-                    bEl.appendChild(cell);
-                }
-            }
-            if (mode === 'bot' && turn === 'black') setTimeout(botBrain, 600);
-        }
-
-        function checkMove(fr, fc, tr, tc) {
-            if (board[tr][tc]) return false;
-            const p = board[fr][fc];
-            const dr = tr - fr, dc = tc - fc;
-            if (Math.abs(dr) !== Math.abs(dc)) return false;
+            const b = document.getElementById('board'); b.innerHTML = '';
+            document.getElementById('turn-indicator').innerText = "ХОД " + (turn === 'white' ? "БЕЛЫХ" : "ЧЕРНЫХ");
             
-            if (Math.abs(dr) === 1) {
-                if (p.king) return true;
-                return p.color === 'white' ? dr === -1 : dr === 1;
-            }
-            if (Math.abs(dr) === 2) {
-                const mid = board[fr + dr/2][fc + dc/2];
-                return mid && mid.color !== p.color;
-            }
-            return false;
-        }
-
-        function executeMove(f, t, c) {
-            const [fr, fc] = f, [tr, tc] = t;
-            const p = board[fr][fc];
-            board[tr][tc] = p;
-            board[fr][fc] = null;
-            if (c) board[c.r][c.c] = null;
-            if ((p.color === 'white' && tr === 0) || (p.color === 'black' && tr === 7)) p.king = true;
-            turn = turn === 'white' ? 'black' : 'white';
-            selected = null;
-        }
-
-        function botBrain() {
-            let moves = [];
             for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
-                if(board[r][c]?.color === 'black') {
-                    for(let dr of [-2,-1,1,2]) for(let dc of [-2,-1,1,2]) {
-                        if(r+dr>=0 && r+dr<8 && c+dc>=0 && c+dc<8 && checkMove(r,c,r+dr,c+dc))
-                            moves.push({ f:[r,c], t:[r+dr,c+dc], cap: Math.abs(dr)===2 });
+                const cell = document.createElement('div');
+                cell.className = `cell ${(r+c)%2===0?'w':'b'}`;
+                const p = board[r][c];
+                if(p) {
+                    const pEl = document.createElement('div');
+                    pEl.className = `piece p-${p.color} ${p.king?'king':''} ${selected?.r===r&&selected?.c===c?'selected':''}`;
+                    pEl.onclick = () => { if(p.color === turn) { selected = {r,c}; render(); } };
+                    cell.appendChild(pEl);
+                }
+                if(selected) {
+                    const moves = getMoves(selected.r, selected.c);
+                    const m = moves.find(mv => mv.tr === r && mv.tc === c);
+                    if(m) {
+                        const h = document.createElement('div'); h.className = 'hint';
+                        h.onclick = () => executeMove(selected.r, selected.c, r, c, m.cap, true);
+                        cell.appendChild(h);
                     }
                 }
+                b.appendChild(cell);
             }
-            const jump = moves.find(m => m.cap);
-            const m = jump || moves[Math.floor(Math.random()*moves.length)];
-            if(m) executeMove(m.f, m.t, m.cap ? {r: m.f[0]+(m.t[0]-m.f[0])/2, c:m.f[1]+(m.t[1]-m.f[1])/2} : null);
-            render();
+            if(turn === 'black' && gameMode === 'bot') setTimeout(botLogic, 600);
+        }
+
+        function getMoves(r, c) {
+            const p = board[r][c]; let moves = [], dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+            const stepDirs = p.king ? dirs : (p.color==='white'?[[-1,1],[-1,-1]]:[[1,1],[1,-1]]);
+            stepDirs.forEach(d => {
+                let tr=r+d[0], tc=c+d[1];
+                if(tr>=0&&tr<8&&tc>=0&&tc<8 && !board[tr][tc]) moves.push({tr, tc, cap:null});
+            });
+            dirs.forEach(d => {
+                let mr=r+d[0], mc=c+d[1], tr=r+d[0]*2, tc=c+d[1]*2;
+                if(tr>=0&&tr<8&&tc>=0&&tc<8 && board[mr][mc] && board[mr][mc].color !== p.color && !board[tr][tc])
+                    moves.push({tr, tc, cap:{r:mr, c:mc}});
+            });
+            return moves;
+        }
+
+        function executeMove(fr, fc, tr, tc, cap, send) {
+            const p = board[fr][fc];
+            board[tr][tc] = p; board[fr][fc] = null;
+            if(cap) board[cap.r][cap.c] = null;
+            if((p.color === 'white' && tr === 0) || (p.color === 'black' && tr === 7)) p.king = true;
+            if(send && gameMode === 'online' && conn) conn.send({type: 'move', fr, fc, tr, tc, cap});
+            turn = turn === 'white' ? 'black' : 'white';
+            selected = null; render();
+        }
+
+        function botLogic() {
+            let moves = [];
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) 
+                if(board[r][c]?.color === 'black') getMoves(r,c).forEach(m=>moves.push({fr:r,fc:c,tr:m.tr,tc:m.tc,cap:m.cap}));
+            if(moves.length === 0) return;
+            const captures = moves.filter(m => m.cap);
+            let move = (botLevel > 2 && captures.length > 0) ? captures[0] : moves[Math.floor(Math.random()*moves.length)];
+            executeMove(move.fr, move.fc, move.tr, move.tc, move.cap, false);
         }
     </script>
 </body>
