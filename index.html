@@ -1,81 +1,73 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Checkers Elite 2026</title>
+    <title>Checkers Fixed King 2026</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root { --bg: #0a0a0a; --w-c: #f0d9b5; --b-c: #b58863; --sel: #ffeb3b; --must: #ff5722; }
+        :root { --bg: #050505; --w-c: #f0d9b5; --b-c: #b58863; --sel: #ffeb3b; --win: #4caf50; --must: #ff5722; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; }
         
-        #menu-ui { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 1000; display: flex; justify-content: center; align-items: center; }
-        .card { background: #1a1a1a; padding: 25px; border-radius: 20px; width: 85%; max-width: 380px; text-align: center; border: 1px solid #333; }
+        #ui-layer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .card { background: #1a1a1a; padding: 30px; border-radius: 25px; width: 85%; max-width: 380px; text-align: center; border: 1px solid #333; }
         
-        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: #4caf50; color: white; font-size: 1rem; }
+        button { width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; background: var(--win); color: white; }
         .btn-net { background: #ff9800; color: black; }
-        .btn-sec { background: #444; }
+        .btn-exit { background: #d32f2f; }
 
-        header { padding: 10px 15px; background: #161616; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
-        #board-box { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 10px; }
-        #board { display: grid; grid-template-columns: repeat(8, 1fr); width: 95vw; max-width: 480px; aspect-ratio: 1/1; border: 6px solid #222; }
+        header { padding: 15px; background: #111; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
+        #board-wrap { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 5px; }
+        #board { display: grid; grid-template-columns: repeat(8, 1fr); width: 96vw; max-width: 500px; aspect-ratio: 1/1; border: 8px solid #222; }
         
-        .cell { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; }
+        .cell { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .light { background: var(--w-c); }
         .dark { background: var(--b-c); }
-        .selected { background: var(--sel) !important; }
-        .can-jump { box-shadow: inset 0 0 15px var(--must); }
+        .selected { background: var(--sel) !important; outline: 3px solid #ff9800; outline-offset: -3px; }
+        .must-hit { box-shadow: inset 0 0 15px var(--must); }
         
-        .p { width: 84%; height: 84%; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-        .p-w { background: radial-gradient(circle at 30% 30%, #fff, #999); border: 1px solid #777; }
+        .p { width: 84%; height: 84%; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.6); position: relative; }
+        .p-w { background: radial-gradient(circle at 30% 30%, #fff, #888); border: 1px solid #777; }
         .p-b { background: radial-gradient(circle at 30% 30%, #444, #000); border: 1px solid #111; }
-        .king::after { content: '👑'; display: flex; justify-content: center; align-items: center; height: 100%; font-size: 1.5rem; }
+        .king::after { content: '👑'; position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; }
 
-        select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; background: #333; color: white; border: 1px solid #555; }
-        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ff9800; color: black; padding: 10px 20px; border-radius: 20px; font-weight: bold; display: none; z-index: 2000; }
+        #win-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; justify-content: center; align-items: center; }
+        .win-box { background: #222; padding: 40px; border-radius: 30px; text-align: center; border: 2px solid var(--win); }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="toast">ИГРОК ПОДКЛЮЧИЛСЯ!</div>
-
-    <div id="menu-ui">
-        <div class="card" id="m-main">
-            <h2 style="color:#4caf50; margin-top:0;">CHECKERS ELITE</h2>
-            <button onclick="launch('local')">Вдвоем (на одном)</button>
-            <button onclick="tab('m-bot')">Против Бота</button>
-            <button onclick="tab('m-net')" class="btn-net">Онлайн Игра</button>
+    <div id="win-modal">
+        <div class="win-box">
+            <h1 id="win-text" style="color:var(--win);">ПОБЕДА!</h1>
+            <button class="btn-exit" onclick="location.reload()">ВЫЙТИ В МЕНЮ</button>
         </div>
+    </div>
 
-        <div class="card hidden" id="m-bot">
-            <h3>Уровень Бота</h3>
-            <select id="bot-lv">
-                <option value="1">Новичок (Случайно)</option>
-                <option value="2">Любитель (Атакует)</option>
-                <option value="3">Профи (Умный)</option>
-            </select>
-            <button onclick="launch('bot')">Начать</button>
-            <button class="btn-sec" onclick="tab('m-main')">Назад</button>
+    <div id="ui-layer">
+        <div class="card" id="main-m">
+            <h1 style="color:var(--win);">CHECKERS PRO</h1>
+            <button onclick="start('bot')">ИГРА С БОТОМ</button>
+            <button onclick="start('local')">НА ДВОИХ</button>
+            <button class="btn-net" onclick="tab('net-m')">ОНЛАЙН</button>
         </div>
-
-        <div class="card hidden" id="m-net">
-            <h3>Онлайн Лобби</h3>
-            <button onclick="netCreate()">Создать игру</button>
-            <div id="rooms" style="margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
-            <button class="btn-sec" onclick="tab('m-main')">Назад</button>
+        <div class="card hidden" id="net-m">
+            <h3>ЛОББИ</h3>
+            <button onclick="netCreate()">СОЗДАТЬ</button>
+            <div id="room-list"></div>
+            <button style="background:#444" onclick="tab('main-m')">НАЗАД</button>
         </div>
     </div>
 
     <header>
-        <button onclick="location.reload()" style="background:#b71c1c; width:auto; padding:8px 15px;">ВЫХОД</button>
-        <div id="turn-txt">Ход Белых</div>
-        <div id="rid-txt" style="color:#ff9800; font-size:0.8rem;"></div>
+        <button onclick="location.reload()" class="btn-exit" style="width:auto; padding:8px 15px;">ВЫХОД</button>
+        <div id="info">Ход Белых</div>
+        <div id="room-id" style="color:#ff9800; font-size:0.8rem;"></div>
     </header>
 
-    <div id="board-box"><div id="board"></div></div>
+    <div id="board-wrap"><div id="board"></div></div>
 
 <script>
     const firebaseConfig = {
@@ -87,148 +79,175 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let s = { board: [], turn: 'white', sel: null, mode: 'local', myC: 'white', rid: null, must: [], combo: null, lv: 1 };
+    let G = { board: [], turn: 'white', sel: null, mode: 'local', myC: 'white', rid: null, must: [], combo: null };
+
+    function init() {
+        G.board = Array(8).fill().map(() => Array(8).fill(null));
+        for(let r=0; r<8; r++) for(let c=0; c<8; c++) if((r+c)%2!==0) {
+            if(r < 3) G.board[r][c] = { color: 'black', king: false };
+            else if(r > 4) G.board[r][c] = { color: 'white', king: false };
+        }
+    }
 
     function tab(id) {
         document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
-        if(id === 'm-net') netRefresh();
+        if(id === 'net-m') netRefresh();
     }
 
-    function init() {
-        s.board = Array(8).fill().map(() => Array(8).fill(null));
-        for(let r=0; r<8; r++) for(let c=0; c<8; c++) if((r+c)%2!==0) {
-            if(r < 3) s.board[r][c] = { color: 'black', king: false };
-            else if(r > 4) s.board[r][c] = { color: 'white', king: false };
-        }
-    }
-
-    function getJumps(color) {
-        let jumps = [];
-        s.board.forEach((row, r) => row.forEach((p, c) => {
+    function getHits(color) {
+        let hits = [];
+        G.board.forEach((row, r) => row.forEach((p, c) => {
             if(p && p.color === color) {
-                const targets = p.king ? [[1,1],[1,-1],[-1,1],[-1,-1]] : [[2,2],[2,-2],[-2,2],[-2,-2]];
-                targets.forEach(([dr, dc]) => {
-                    if(canJump(r, c, r+dr, c+dc)) jumps.push({fR:r, fC:c, tR:r+dr, tC:c+dc});
+                const dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+                dirs.forEach(([dr, dc]) => {
+                    let victimFound = null;
+                    for(let i = 1; i < 8; i++) {
+                        let tr = r + dr*i, tc = c + dc*i;
+                        if(tr<0||tr>7||tc<0||tc>7) break;
+                        const target = G.board[tr][tc];
+                        
+                        if(!victimFound) {
+                            if(target) {
+                                if(target.color !== color) victimFound = {r:tr, c:tc};
+                                else break; // Своя фигура
+                            } else {
+                                if(!p.king) break; // Обычная шашка не летит
+                            }
+                        } else {
+                            if(!target) {
+                                hits.push({fR:r, fC:c, tR:tr, tC:tc, victim:victimFound});
+                            } else break; // Путь заблокирован после жертвы
+                        }
+                        if(!p.king && i === 1 && !victimFound) break; // Обычная шашка бьет только через 1
+                    }
                 });
             }
         }));
-        return jumps;
-    }
-
-    function canJump(fR, fC, tR, tC) {
-        if(tR<0||tR>7||tC<0||tC>7||s.board[tR][tC]) return false;
-        const p = s.board[fR][fC];
-        const mR = fR + (tR-fR)/2, mC = fC + (tC-fC)/2;
-        return s.board[mR][mC] && s.board[mR][mC].color !== p.color;
+        return hits;
     }
 
     function render() {
-        const b = document.getElementById('board'); b.innerHTML = '';
-        if(!s.board.length) return;
-        s.must = getJumps(s.turn);
+        const bEl = document.getElementById('board'); bEl.innerHTML = '';
+        if(!G.board.length) return;
+        G.must = getHits(G.turn);
+        
+        let w=0, b=0; G.board.forEach(r=>r.forEach(p=>{if(p?.color==='white')w++;if(p?.color==='black')b++;}));
+        if(w===0) showWin('ЧЕРНЫЕ'); if(b===0) showWin('БЕЛЫЕ');
 
-        s.board.forEach((row, r) => row.forEach((p, c) => {
+        G.board.forEach((row, r) => row.forEach((p, c) => {
             const cell = document.createElement('div');
             cell.className = `cell ${(r+c)%2===0?'light':'dark'}`;
-            if(s.sel && s.sel.r === r && s.sel.c === c) cell.classList.add('selected');
-            if(s.must.some(m => m.fR === r && m.fC === c)) cell.classList.add('can-jump');
-
+            if(G.sel && G.sel.r === r && G.sel.c === c) cell.classList.add('selected');
+            if(G.must.some(m => m.fR === r && m.fC === c)) cell.classList.add('must-hit');
             if(p) {
                 const div = document.createElement('div');
                 div.className = `p p-${p.color[0]} ${p.king?'king':''}`;
                 cell.appendChild(div);
             }
             cell.onclick = () => tap(r, c);
-            b.appendChild(cell);
+            bEl.appendChild(cell);
         }));
-        document.getElementById('turn-txt').innerText = s.turn === 'white' ? 'Ход Белых' : 'Ход Черных';
-        if(s.mode === 'bot' && s.turn === 'black') setTimeout(botDo, 600);
+        document.getElementById('info').innerText = G.turn === 'white' ? 'БЕЛЫЕ' : 'ЧЕРНЫЕ';
+        if(G.mode === 'bot' && G.turn === 'black') setTimeout(botMove, 700);
     }
 
     function tap(r, c) {
-        if(s.mode === 'online' && s.turn !== s.myC) return;
-        const p = s.board[r][c];
-        if(p && p.color === s.turn) {
-            if(s.must.length && !s.must.some(m => m.fR === r && m.fC === c)) return;
-            if(s.combo && (s.combo.r !== r || s.combo.c !== c)) return;
-            s.sel = {r, c}; render();
-        } else if(s.sel) {
-            move(s.sel.r, s.sel.c, r, c);
+        if(G.mode === 'online' && G.turn !== G.myC) return;
+        const p = G.board[r][c];
+        if(G.combo) {
+            if(r === G.combo.r && c === G.combo.c) { G.sel = {r, c}; render(); }
+            else if(G.sel) move(G.sel.r, G.sel.c, r, c);
+            return;
         }
+        if(p && p.color === G.turn) {
+            if(G.must.length && !G.must.some(m => m.fR === r && m.fC === c)) return;
+            G.sel = {r, c}; render();
+        } else if(G.sel) move(G.sel.r, G.sel.c, r, c);
     }
 
     function move(fR, fC, tR, tC) {
-        if((tR+tC)%2===0 || s.board[tR][tC]) return;
-        const dr = tR-fR, dc = tC-fC, p = s.board[fR][fC];
-        const absDr = Math.abs(dr);
+        if((tR+tC)%2===0 || G.board[tR][tC]) return;
+        const p = G.board[fR][fC];
+        const dr = tR - fR, dc = tC - fC;
+        const absDr = Math.abs(dr), absDc = Math.abs(dc);
+        if(absDr !== absDc) return;
 
-        // Правило хода только вперед
-        if(!p.king && absDr === 1) {
-            if(p.color === 'white' && dr > 0) return;
-            if(p.color === 'black' && dr < 0) return;
+        const sR = dr/absDr, sC = dc/absDc;
+        let victims = [];
+
+        for(let i = 1; i < absDr; i++) {
+            let currR = fR + sR*i, currC = fC + sC*i;
+            if(G.board[currR][currC]) {
+                if(G.board[currR][currC].color === p.color) return;
+                victims.push({r: currR, c: currC});
+            }
         }
 
-        let jump = false;
-        if(absDr === 2) {
-            const mR = fR+dr/2, mC = fC+dc/2;
-            if(s.board[mR][mC] && s.board[mR][mC].color !== p.color) {
-                s.board[mR][mC] = null; jump = true;
-            } else return;
-        } else if(absDr !== 1 || s.must.length) return;
+        if(victims.length > 1) return;
+        
+        let victim = victims[0];
+        if(!victim) {
+            if(G.must.length) return;
+            if(!p.king) {
+                if(absDr > 1) return;
+                if(p.color === 'white' && dr > 0) return;
+                if(p.color === 'black' && dr < 0) return;
+            }
+        }
 
-        s.board[tR][tC] = p; s.board[fR][fC] = null;
+        if(victim) G.board[victim.r][victim.c] = null;
+        G.board[tR][tC] = p; G.board[fR][fC] = null;
         if((p.color==='white'&&tR===0)||(p.color==='black'&&tR===7)) p.king = true;
 
-        const nextJumps = jump ? getJumps(p.color).filter(m => m.fR === tR && m.fC === tC) : [];
-        if(nextJumps.length) {
-            s.combo = {r: tR, c: tC}; s.sel = s.combo;
-        } else {
-            s.turn = s.turn === 'white' ? 'black' : 'white';
-            s.sel = null; s.combo = null;
-        }
+        const nextHits = victim ? getHits(p.color).filter(m => m.fR === tR && m.fC === tC) : [];
+        if(nextHits.length) { G.combo = {r: tR, c: tC}; G.sel = G.combo; }
+        else { G.turn = G.turn === 'white' ? 'black' : 'white'; G.sel = null; G.combo = null; }
 
-        if(s.mode === 'online') db.ref('rooms/'+s.rid).update({board: s.board, turn: s.turn});
+        if(G.mode === 'online') db.ref('rooms/'+G.rid).update({board: G.board, turn: G.turn});
         render();
     }
 
-    function botDo() {
-        let moves = s.must.length ? s.must : [];
+    function botMove() {
+        let moves = G.must.length ? G.must : [];
         if(!moves.length) {
-            s.board.forEach((row, r) => row.forEach((p, c) => {
-                if(p?.color === 'black') [[1,1],[1,-1]].forEach(([dr, dc]) => {
-                    const tr=r+dr, tc=c+dc; 
-                    if(tr>=0&&tr<8&&tc>=0&&tc<8 && !s.board[tr][tc]) moves.push({fR:r, fC:c, tR:tr, tC:tc});
-                });
+            G.board.forEach((row, r) => row.forEach((p, c) => {
+                if(p?.color === 'black') {
+                    const dirs = p.king ? [[1,1],[1,-1],[-1,1],[-1,-1]] : [[1,1],[1,-1]];
+                    dirs.forEach(([dr, dc]) => {
+                        for(let i=1; i<(p.king?8:2); i++) {
+                            let tr=r+dr*i, tc=c+dc*i;
+                            if(tr>=0&&tr<8&&tc>=0&&tc<8 && !G.board[tr][tc]) {
+                                if(!p.king && dr < 0) break; // Обычная черная шашка не ходит вверх (dr < 0 это вверх в сетке)
+                                moves.push({fR:r, fC:c, tR:tr, tC:tc});
+                            } else break;
+                        }
+                    });
+                }
             }));
         }
-        const m = moves[Math.floor(Math.random()*moves.length)];
+        moves.sort((a,b) => (b.tR===7?1:0)-(a.tR===7?1:0));
+        const m = moves[Math.floor(Math.random() * Math.min(moves.length, 3))];
         if(m) move(m.fR, m.fC, m.tR, m.tC);
     }
 
-    function launch(m) {
-        s.mode = m; s.lv = document.getElementById('bot-lv').value; init();
-        document.getElementById('menu-ui').style.display='none'; render();
-    }
-
+    function showWin(w) { document.getElementById('win-text').innerText="ПОБЕДА: "+w; document.getElementById('win-modal').style.display='flex'; }
+    function start(m) { G.mode=m; init(); document.getElementById('ui-layer').style.display='none'; render(); }
     function netCreate() {
-        s.rid = Math.floor(1000+Math.random()*8999).toString(); s.myC='white'; s.mode='online'; init();
-        db.ref('rooms/'+s.rid).set({board: s.board, turn: 'white', p:1}).then(() => {
-            db.ref('lobby/'+s.rid).set(true); sync();
-            document.getElementById('menu-ui').style.display='none';
-            document.getElementById('rid-txt').innerText="ID: "+s.rid; render();
+        G.rid = Math.floor(1000+Math.random()*8999).toString(); G.myC='white'; G.mode='online'; init();
+        db.ref('rooms/'+G.rid).set({board:G.board, turn:'white', p:1}).then(()=>{
+            db.ref('lobby/'+G.rid).set(true); sync();
+            document.getElementById('ui-layer').style.display='none';
+            document.getElementById('room-id').innerText="ID: "+G.rid; render();
         });
-        db.ref('rooms/'+s.rid+'/p').on('value', v => { if(v.val()===2) { document.getElementById('toast').style.display='block'; setTimeout(()=>document.getElementById('toast').style.display='none', 5000); }});
     }
-
     function netJoin(id) {
-        s.rid = id; s.myC='black'; s.mode='online';
+        G.rid=id; G.myC='black'; G.mode='online';
         db.ref('rooms/'+id+'/p').set(2); db.ref('lobby/'+id).remove();
-        sync(); document.getElementById('menu-ui').style.display='none';
+        sync(); document.getElementById('ui-layer').style.display='none';
     }
-
-    function sync() { db.ref('rooms/'+s.rid).on('value', v => { const d = v.val(); if(d && d.board) { s.board = d.board; s.turn = d.turn; render(); }}); }
-    function netRefresh() { db.ref('lobby').on('value', v => { const r = document.getElementById('rooms'); r.innerHTML = ''; const d = v.val(); for(let id in d) { const b = document.createElement('button'); b.innerText="Присоединиться #"+id; b.onclick=()=>netJoin(id); r.appendChild(b); }}); }
+    function sync() { db.ref('rooms/'+G.rid).on('value', v => { const d=v.val(); if(d && d.board){G.board=d.board; G.turn=d.turn; render();}}); }
+    function netRefresh() { db.ref('lobby').on('value', v => { const r=document.getElementById('room-list'); r.innerHTML=''; const d=v.val(); for(let id in d){ const b=document.createElement('button'); b.innerText="ВХОД #"+id; b.onclick=()=>netJoin(id); r.appendChild(b); }}); }
 </script>
 </body>
 </html>
