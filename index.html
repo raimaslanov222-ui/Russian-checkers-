@@ -3,98 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Checkers Online 2026</title>
+    <title>Checkers Pro 2026</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root {
-            --bg: #121212;
-            --surface: #1e1e1e;
-            --primary: #4caf50;
-            --accent: #ff9800;
-            --cell-light: #eeeed2;
-            --cell-dark: #769656;
+            --bg: #0f0f0f; --surface: #1a1a1a; --primary: #4caf50;
+            --accent: #ff9800; --cell-light: #eeeed2; --cell-dark: #769656;
         }
-
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; flex-direction: column; }
-
-        /* Начальный экран */
-        #start-screen { position: fixed; inset: 0; background: radial-gradient(circle, #2c3e50, #000); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.5s; }
-        .menu-card { background: var(--surface); padding: 30px; border-radius: 20px; width: 85%; max-width: 380px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
         
-        h1 { margin-top: 0; font-size: 2rem; letter-spacing: 2px; color: var(--primary); }
-        button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        .btn-sec { background: #444; }
-
-        input, select { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; background: #2a2a2a; color: white; border: 1px solid #444; box-sizing: border-box; font-size: 1rem; }
-
-        /* Игровое поле */
-        #status-bar { background: var(--surface); padding: 12px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; }
-        #game-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 5px; }
+        /* Меню */
+        #start-screen { position: fixed; inset: 0; background: radial-gradient(circle at center, #2c3e50, #000); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .menu-card { background: var(--surface); padding: 25px; border-radius: 24px; width: 88%; max-width: 400px; text-align: center; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
         
-        #board { 
-            display: grid; 
-            grid-template-columns: repeat(8, 1fr); 
-            width: 100%; 
-            aspect-ratio: 1/1; 
-            max-width: 500px; 
-            border: 4px solid #333; 
-            background: #333;
-        }
+        h1 { margin: 0 0 20px; font-size: 1.8rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; }
+        button { width: 100%; padding: 16px; margin: 8px 0; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
+        .btn-sec { background: #333; }
+        .btn-orange { background: var(--accent); }
+        .btn-exit { background: #b71c1c; width: auto; padding: 6px 15px; margin: 0; }
+
+        /* Лобби */
+        #room-list { background: #111; border-radius: 12px; max-height: 200px; overflow-y: auto; margin: 10px 0; border: 1px solid #222; }
+        .room-item { padding: 12px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .room-item:last-child { border: 0; }
+        .room-item button { width: auto; padding: 6px 12px; margin: 0; font-size: 0.8rem; }
+
+        /* Игра */
+        #status-bar { background: var(--surface); padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
+        #game-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 10px; }
+        #board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; aspect-ratio: 1/1; max-width: 500px; border: 6px solid #333; background: #333; border-radius: 4px; }
         
         .cell { aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; position: relative; }
         .white-c { background: var(--cell-light); }
         .black-c { background: var(--cell-dark); }
         .selected { background: #f7e03c !important; }
-        .last-move { background: rgba(255, 255, 0, 0.2) !important; }
-
-        .piece { width: 82%; height: 82%; border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.4); z-index: 5; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .p-white { background: radial-gradient(circle at 30% 30%, #fff, #bbb); border: 1px solid #999; }
-        .p-black { background: radial-gradient(circle at 30% 30%, #444, #000); border: 1px solid #111; }
-        .king::after { content: '👑'; font-size: 1.3rem; color: gold; display: flex; justify-content: center; align-items: center; height: 100%; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-
+        
+        .piece { width: 84%; height: 84%; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.5); z-index: 5; transition: 0.2s; }
+        .p-white { background: radial-gradient(circle at 30% 30%, #ffffff, #a0a0a0); border: 1px solid #888; }
+        .p-black { background: radial-gradient(circle at 30% 30%, #444444, #000000); border: 1px solid #111; }
+        .king::after { content: '👑'; font-size: 1.4rem; color: gold; display: flex; justify-content: center; align-items: center; height: 100%; text-shadow: 0 2px 2px rgba(0,0,0,0.8); }
+        
         .hidden { display: none !important; }
+        select { width: 100%; padding: 12px; border-radius: 10px; background: #222; color: white; border: 1px solid #444; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="start-screen">
         <div class="menu-card">
-            <h1>ШАШКИ 2026</h1>
+            <h1>Шашки Online</h1>
+            
             <div id="main-m">
-                <button onclick="startLocal()">Вдвоем (Оффлайн)</button>
-                <button onclick="showS('bot-m')">Против Бота</button>
-                <button onclick="showS('online-m')" style="background: var(--accent)">Игра по сети</button>
+                <button onclick="startLocal()">Играть за одним экраном</button>
+                <button onclick="showS('bot-m')" class="btn-sec">Против бота</button>
+                <button onclick="showS('online-m')" class="btn-orange">Игра по сети</button>
             </div>
 
             <div id="bot-m" class="hidden">
-                <select id="bot-lvl"><option value="1">Сложность: Легко</option><option value="2">Сложность: Средне</option><option value="3">Сложность: Профи</option></select>
-                <select id="p-color"><option value="white">Я за Белых</option><option value="black">Я за Черных</option></select>
+                <select id="bot-lvl">
+                    <option value="1">Сложность: Новичок</option>
+                    <option value="2">Сложность: Любитель</option>
+                    <option value="3">Сложность: Профи</option>
+                </select>
                 <button onclick="startBot()">Начать игру</button>
                 <button class="btn-sec" onclick="showS('main-m')">Назад</button>
             </div>
 
             <div id="online-m" class="hidden">
-                <input type="number" id="room-input" placeholder="Код комнаты">
-                <button onclick="createRoom()">Создать комнату</button>
-                <button onclick="joinRoom()" style="background: var(--accent)">Войти по коду</button>
+                <button onclick="createRoom()">+ Создать комнату</button>
+                <div style="font-size: 0.8rem; margin: 10px 0; color: #888;">Свободные комнаты:</div>
+                <div id="room-list">Поиск игр...</div>
                 <button class="btn-sec" onclick="showS('main-m')">Назад</button>
             </div>
         </div>
     </div>
 
     <div id="status-bar">
-        <span id="turn-text">Ход Белых</span>
-        <span id="room-display" class="hidden">Комната: -</span>
+        <button class="btn-exit" onclick="location.reload()">Выйти</button>
+        <span id="turn-text">Загрузка...</span>
+        <span id="room-id-display" style="color:var(--accent); font-weight:bold;"></span>
     </div>
     
-    <div id="game-container">
-        <div id="board"></div>
-    </div>
+    <div id="game-container"><div id="board"></div></div>
 
 <script>
-    // Твои конфиги Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyCFJQ4OKKStxVW7gUj1lS4KHwxGc1_QIwg",
         authDomain: "mymobilegame-b5e68.firebaseapp.com",
@@ -112,8 +106,58 @@
     let mode = 'local', userColor = 'white', roomId = null, botLvl = 1;
 
     function showS(id) {
-        ['main-m', 'bot-m', 'online-m'].forEach(el => document.getElementById(el).classList.add('hidden'));
+        document.getElementById('main-m').classList.add('hidden');
+        document.getElementById('bot-m').classList.add('hidden');
+        document.getElementById('online-m').classList.add('hidden');
         document.getElementById(id).classList.remove('hidden');
+        if(id === 'online-m') refreshLobby();
+    }
+
+    function refreshLobby() {
+        const listEl = document.getElementById('room-list');
+        db.ref('lobby').on('value', snap => {
+            listEl.innerHTML = '';
+            const data = snap.val();
+            if(!data) { listEl.innerHTML = "<div style='padding:10px; color:#555;'>Нет активных игр</div>"; return; }
+            for(let id in data) {
+                const item = document.createElement('div');
+                item.className = 'room-item';
+                item.innerHTML = `<span>Комната #${id}</span><button onclick="joinRoom('${id}')">Вход</button>`;
+                listEl.appendChild(item);
+            }
+        });
+    }
+
+    function createRoom() {
+        roomId = Math.floor(1000 + Math.random() * 8999).toString();
+        userColor = 'white'; mode = 'online';
+        initData();
+        enterGame();
+        render();
+
+        // Фоновая запись
+        db.ref('rooms/' + roomId).set({ board, turn: 'white' });
+        db.ref('lobby/' + roomId).set({ status: 'waiting' });
+        startOnlineSync();
+    }
+
+    function joinRoom(id) {
+        roomId = id; userColor = 'black'; mode = 'online';
+        db.ref('lobby/' + roomId).remove(); 
+        enterGame();
+        startOnlineSync();
+    }
+
+    function enterGame() {
+        document.getElementById('start-screen').style.transform = 'translateY(-110%)';
+        document.getElementById('room-id-display').innerText = "ID: " + (roomId || "Local");
+    }
+
+    function startOnlineSync() {
+        db.ref('rooms/' + roomId).on('value', snap => {
+            const data = snap.val();
+            if(data) { board = data.board; turn = data.turn; render(); }
+        });
     }
 
     function initData() {
@@ -139,7 +183,6 @@
                 const cell = document.createElement('div');
                 cell.className = `cell ${(r+c)%2===0?'white-c':'black-c'}`;
                 if(selected?.r===r && selected?.c===c) cell.classList.add('selected');
-
                 if(board[r][c]) {
                     const p = document.createElement('div');
                     p.className = `piece p-${board[r][c].color} ${board[r][c].king?'king':''}`;
@@ -149,17 +192,16 @@
                 bEl.appendChild(cell);
             }
         }
-        document.getElementById('turn-text').innerText = turn==='white'?'Ход: БЕЛЫЕ':'Ход: ЧЕРНЫЕ';
+        document.getElementById('turn-text').innerText = turn==='white'?'Ход Белых':'Ход Черных';
         if(mode==='bot' && turn!==userColor) setTimeout(doBot, 600);
     }
 
     function handleClick(r, c) {
         if((mode==='bot' || mode==='online') && turn !== userColor) return;
         const p = board[r][c];
-
         if(p && p.color === turn) {
-            const moves = getMoves(turn);
-            if(mustJump && !moves.some(m => m.r===r && m.c===c && m.isJump)) return;
+            const ms = getMoves(turn);
+            if(mustJump && !ms.some(m => m.r===r && m.c===c && m.isJump)) return;
             selected = {r, c}; render();
         } else if(selected) {
             const move = getPieceMoves(selected.r, selected.c).find(m => m.toR===r && m.toC===c);
@@ -181,10 +223,7 @@
             selected = null;
             turn = turn==='white'?'black':'white';
         }
-
-        if(mode==='online') {
-            db.ref('rooms/' + roomId).set({ board, turn });
-        }
+        if(mode==='online') db.ref('rooms/' + roomId).set({ board, turn });
         render();
         checkGameOver();
     }
@@ -231,56 +270,29 @@
     function doBot() {
         const ms = getMoves(turn);
         if(!ms.length) return;
-        ms.sort((a,b) => (b.isJump?1:0) - (a.isJump?1:0));
-        if(botLvl > 1) { /* Простая логика приоритета дамок */ }
-        executeMove(botLvl == 1 ? ms[Math.floor(Math.random()*ms.length)] : ms[0]);
-    }
-
-    function createRoom() {
-        roomId = Math.floor(1000 + Math.random() * 9000); // Генерим 4 цифры
-        userColor = 'white';
-        mode = 'online';
-        initData();
-        db.ref('rooms/' + roomId).set({ board, turn });
-        startOnlineSync();
-    }
-
-    function joinRoom() {
-        roomId = document.getElementById('room-input').value;
-        if(!roomId) return alert("Введите код!");
-        userColor = 'black';
-        mode = 'online';
-        startOnlineSync();
-    }
-
-    function startOnlineSync() {
-        db.ref('rooms/' + roomId).on('value', snap => {
-            const data = snap.val();
-            if(data) {
-                board = data.board;
-                turn = data.turn;
-                document.getElementById('room-display').innerText = "Комната: " + roomId;
-                document.getElementById('room-display').classList.remove('hidden');
-                document.getElementById('start-screen').style.transform = 'translateY(-100%)';
-                render();
-            } else if (userColor === 'black') {
-                alert("Комната не найдена!");
-            }
+        // Оценка хода для Профи уровня
+        ms.sort((a,b) => {
+            let scoreA = (a.isJump ? 10 : 0) + (a.toR == 0 || a.toR == 7 ? 5 : 0);
+            let scoreB = (b.isJump ? 10 : 0) + (b.toR == 0 || b.toR == 7 ? 5 : 0);
+            return scoreB - scoreA;
         });
+        const finalMove = botLvl == 1 ? ms[Math.floor(Math.random()*ms.length)] : ms[0];
+        executeMove(finalMove);
     }
 
     function checkGameOver() {
         if(getMoves(turn).length === 0) {
-            alert("ИГРА ОКОНЧЕНА! Победили " + (turn === 'white' ? "Черные" : "Белые"));
+            alert("Конец игры! Победили " + (turn === 'white' ? "Черные" : "Белые"));
             location.reload();
         }
     }
 
-    function startLocal() { mode='local'; initData(); document.getElementById('start-screen').style.transform = 'translateY(-100%)'; render(); }
+    function startLocal() { mode='local'; initData(); enterGame(); render(); }
     function startBot() { 
-        mode='bot'; botLvl = document.getElementById('bot-lvl').value; 
-        userColor = document.getElementById('p-color').value;
-        initData(); document.getElementById('start-screen').style.transform = 'translateY(-100%)'; render(); 
+        mode='bot'; 
+        botLvl = document.getElementById('bot-lvl').value; 
+        userColor = 'white'; 
+        initData(); enterGame(); render(); 
     }
 
 </script>
