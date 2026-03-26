@@ -1,266 +1,234 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Checkers Ultimate 2026</title>
+    <title>Checkers Elite 2026</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root {
-            --bg: #0d0d0d; --surface: #1a1a1a; --primary: #4caf50;
-            --accent: #ff9800; --cell-light: #eeeed2; --cell-dark: #769656;
-        }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        :root { --bg: #0a0a0a; --w-c: #f0d9b5; --b-c: #b58863; --sel: #ffeb3b; --must: #ff5722; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Кастомные окна меню */
-        #start-screen { position: fixed; inset: 0; background: radial-gradient(circle, #2c3e50, #000); z-index: 100; display: flex; justify-content: center; align-items: center; }
-        .menu-card { background: var(--surface); padding: 30px; border-radius: 25px; width: 85%; max-width: 380px; text-align: center; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #menu-ui { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .card { background: #1a1a1a; padding: 25px; border-radius: 20px; width: 85%; max-width: 380px; text-align: center; border: 1px solid #333; }
         
-        h2 { color: var(--primary); margin-bottom: 20px; letter-spacing: 1px; }
-        button { width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: 0.2s; }
-        button:active { transform: scale(0.96); }
-        .btn-sec { background: #333; }
-        .btn-orange { background: var(--accent); color: black; }
-        
-        select { width: 100%; padding: 12px; border-radius: 10px; background: #252525; color: white; border: 1px solid #444; margin-bottom: 15px; outline: none; font-size: 1rem; }
+        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: #4caf50; color: white; font-size: 1rem; }
+        .btn-net { background: #ff9800; color: black; }
+        .btn-sec { background: #444; }
 
-        /* Игровой интерфейс */
-        #status-bar { width: 100%; background: var(--surface); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; box-sizing: border-box; }
-        #board { 
-            display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-            width: 94vw; max-width: 500px; aspect-ratio: 1 / 1; 
-            border: 5px solid #333; background: #333; margin-top: 20px;
-        }
+        header { padding: 10px 15px; background: #161616; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
+        #board-box { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 10px; }
+        #board { display: grid; grid-template-columns: repeat(8, 1fr); width: 95vw; max-width: 480px; aspect-ratio: 1/1; border: 6px solid #222; }
         
-        .cell { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        .white-c { background: var(--cell-light); }
-        .black-c { background: var(--cell-dark); }
-        .selected { background: #f7e03c !important; }
+        .cell { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; }
+        .light { background: var(--w-c); }
+        .dark { background: var(--b-c); }
+        .selected { background: var(--sel) !important; }
+        .can-jump { box-shadow: inset 0 0 15px var(--must); }
         
-        .piece { width: 82%; height: 82%; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.6); position: relative; }
-        .p-white { background: radial-gradient(circle at 30% 30%, #ffffff, #b0b0b0); border: 1px solid #999; }
-        .p-black { background: radial-gradient(circle at 30% 30%, #444, #000); border: 1px solid #111; }
-        .king::after { content: '👑'; font-size: 1.3rem; display: flex; justify-content: center; align-items: center; height: 100%; }
-        
+        .p { width: 84%; height: 84%; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        .p-w { background: radial-gradient(circle at 30% 30%, #fff, #999); border: 1px solid #777; }
+        .p-b { background: radial-gradient(circle at 30% 30%, #444, #000); border: 1px solid #111; }
+        .king::after { content: '👑'; display: flex; justify-content: center; align-items: center; height: 100%; font-size: 1.5rem; }
+
+        select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; background: #333; color: white; border: 1px solid #555; }
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ff9800; color: black; padding: 10px 20px; border-radius: 20px; font-weight: bold; display: none; z-index: 2000; }
         .hidden { display: none !important; }
-        #notif { position: fixed; top: 70px; background: var(--accent); color: black; padding: 12px 25px; border-radius: 30px; font-weight: bold; z-index: 200; display: none; }
     </style>
 </head>
 <body>
 
-    <div id="notif">Игрок подключился!</div>
+    <div id="toast">ИГРОК ПОДКЛЮЧИЛСЯ!</div>
 
-    <div id="start-screen">
-        <div class="menu-card">
-            <h2>ШАШКИ 2026</h2>
-            
-            <div id="main-m">
-                <button onclick="showS('bot-m')">Играть с ботом</button>
-                <button onclick="showS('online-m')" class="btn-orange">Игра по сети</button>
-                <button onclick="startLocal()" class="btn-sec">Вдвоем (Offline)</button>
-            </div>
+    <div id="menu-ui">
+        <div class="card" id="m-main">
+            <h2 style="color:#4caf50; margin-top:0;">CHECKERS ELITE</h2>
+            <button onclick="launch('local')">Вдвоем (на одном)</button>
+            <button onclick="tab('m-bot')">Против Бота</button>
+            <button onclick="tab('m-net')" class="btn-net">Онлайн Игра</button>
+        </div>
 
-            <div id="bot-m" class="hidden">
-                <p style="text-align:left; margin-bottom:5px; font-size:0.9rem;">Сложность:</p>
-                <select id="bot-lvl">
-                    <option value="1">Новичок (Случайно)</option>
-                    <option value="2">Мастер (Бьет всегда)</option>
-                </select>
-                <p style="text-align:left; margin-bottom:5px; font-size:0.9rem;">Ваш цвет:</p>
-                <select id="bot-side">
-                    <option value="white">Белые (Ходят первыми)</option>
-                    <option value="black">Черные</option>
-                </select>
-                <button onclick="startBot()">Начать игру</button>
-                <button class="btn-sec" onclick="showS('main-m')">Назад</button>
-            </div>
+        <div class="card hidden" id="m-bot">
+            <h3>Уровень Бота</h3>
+            <select id="bot-lv">
+                <option value="1">Новичок (Случайно)</option>
+                <option value="2">Любитель (Атакует)</option>
+                <option value="3">Профи (Умный)</option>
+            </select>
+            <button onclick="launch('bot')">Начать</button>
+            <button class="btn-sec" onclick="tab('m-main')">Назад</button>
+        </div>
 
-            <div id="online-m" class="hidden">
-                <button onclick="createRoom()">+ Создать комнату</button>
-                <div id="room-list" style="margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
-                <button class="btn-sec" onclick="showS('main-m')">Назад</button>
-            </div>
+        <div class="card hidden" id="m-net">
+            <h3>Онлайн Лобби</h3>
+            <button onclick="netCreate()">Создать игру</button>
+            <div id="rooms" style="margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
+            <button class="btn-sec" onclick="tab('m-main')">Назад</button>
         </div>
     </div>
 
-    <div id="status-bar">
-        <button onclick="location.reload()" style="background:#b71c1c; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold;">ВЫХОД</button>
-        <div id="turn-text" style="font-weight:bold;">Ход...</div>
-        <div id="info-text" style="color:var(--accent); font-size:0.8rem;"></div>
-    </div>
-    
-    <div id="board"></div>
+    <header>
+        <button onclick="location.reload()" style="background:#b71c1c; width:auto; padding:8px 15px;">ВЫХОД</button>
+        <div id="turn-txt">Ход Белых</div>
+        <div id="rid-txt" style="color:#ff9800; font-size:0.8rem;"></div>
+    </header>
+
+    <div id="board-box"><div id="board"></div></div>
 
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyCFJQ4OKKStxVW7gUj1lS4KHwxGc1_QIwg",
         authDomain: "mymobilegame-b5e68.firebaseapp.com",
         databaseURL: "https://mymobilegame-b5e68-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "mymobilegame-b5e68",
-        storageBucket: "mymobilegame-b5e68.appspot.com",
-        messagingSenderId: "596144565705",
-        appId: "1:596144565705:web:8e359005086e1189916e7e"
+        projectId: "mymobilegame-b5e68"
     };
-    
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let board = [], turn = 'white', selected = null;
-    let mode = 'local', userColor = 'white', roomId = null;
+    let s = { board: [], turn: 'white', sel: null, mode: 'local', myC: 'white', rid: null, must: [], combo: null, lv: 1 };
 
-    function showS(id) {
-        document.getElementById('main-m').classList.add('hidden');
-        document.getElementById('bot-m').classList.add('hidden');
-        document.getElementById('online-m').classList.add('hidden');
+    function tab(id) {
+        document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
-        if(id === 'online-m') refreshLobby();
+        if(id === 'm-net') netRefresh();
     }
 
-    function refreshLobby() {
-        const list = document.getElementById('room-list');
-        db.ref('lobby').on('value', snap => {
-            list.innerHTML = '';
-            const data = snap.val();
-            if(!data) { list.innerHTML = "<p style='opacity:0.5'>Нет комнат</p>"; return; }
-            for(let id in data) {
-                const b = document.createElement('button');
-                b.className = "btn-sec";
-                b.innerText = "Комната #" + id;
-                b.onclick = () => joinRoom(id);
-                list.appendChild(b);
-            }
-        });
-    }
-
-    function initBoard() {
-        let b = Array(8).fill().map(() => Array(8).fill(null));
-        for(let r=0; r<8; r++) {
-            for(let c=0; c<8; c++) {
-                if((r+c)%2!==0) {
-                    if(r<3) b[r][c] = {color:'black', king:false};
-                    else if(r>4) b[r][c] = {color:'white', king:false};
-                }
-            }
+    function init() {
+        s.board = Array(8).fill().map(() => Array(8).fill(null));
+        for(let r=0; r<8; r++) for(let c=0; c<8; c++) if((r+c)%2!==0) {
+            if(r < 3) s.board[r][c] = { color: 'black', king: false };
+            else if(r > 4) s.board[r][c] = { color: 'white', king: false };
         }
-        return b;
+    }
+
+    function getJumps(color) {
+        let jumps = [];
+        s.board.forEach((row, r) => row.forEach((p, c) => {
+            if(p && p.color === color) {
+                const targets = p.king ? [[1,1],[1,-1],[-1,1],[-1,-1]] : [[2,2],[2,-2],[-2,2],[-2,-2]];
+                targets.forEach(([dr, dc]) => {
+                    if(canJump(r, c, r+dr, c+dc)) jumps.push({fR:r, fC:c, tR:r+dr, tC:c+dc});
+                });
+            }
+        }));
+        return jumps;
+    }
+
+    function canJump(fR, fC, tR, tC) {
+        if(tR<0||tR>7||tC<0||tC>7||s.board[tR][tC]) return false;
+        const p = s.board[fR][fC];
+        const mR = fR + (tR-fR)/2, mC = fC + (tC-fC)/2;
+        return s.board[mR][mC] && s.board[mR][mC].color !== p.color;
     }
 
     function render() {
-        const bEl = document.getElementById('board');
-        bEl.innerHTML = '';
-        if(!board.length) return;
+        const b = document.getElementById('board'); b.innerHTML = '';
+        if(!s.board.length) return;
+        s.must = getJumps(s.turn);
 
-        for(let r=0; r<8; r++) {
-            for(let c=0; c<8; c++) {
-                const cell = document.createElement('div');
-                cell.className = `cell ${(r+c)%2===0?'white-c':'black-c'}`;
-                if(selected?.r===r && selected?.c===c) cell.classList.add('selected');
-                
-                if(board[r][c]) {
-                    const p = document.createElement('div');
-                    p.className = `piece p-${board[r][c].color} ${board[r][c].king?'king':''}`;
-                    cell.appendChild(p);
-                }
-                cell.onclick = () => handleClick(r, c);
-                bEl.appendChild(cell);
+        s.board.forEach((row, r) => row.forEach((p, c) => {
+            const cell = document.createElement('div');
+            cell.className = `cell ${(r+c)%2===0?'light':'dark'}`;
+            if(s.sel && s.sel.r === r && s.sel.c === c) cell.classList.add('selected');
+            if(s.must.some(m => m.fR === r && m.fC === c)) cell.classList.add('can-jump');
+
+            if(p) {
+                const div = document.createElement('div');
+                div.className = `p p-${p.color[0]} ${p.king?'king':''}`;
+                cell.appendChild(div);
             }
-        }
-        document.getElementById('turn-text').innerText = turn==='white'?'Ход Белых':'Ход Черных';
-        if(mode === 'bot' && turn !== userColor) setTimeout(doBot, 800);
+            cell.onclick = () => tap(r, c);
+            b.appendChild(cell);
+        }));
+        document.getElementById('turn-txt').innerText = s.turn === 'white' ? 'Ход Белых' : 'Ход Черных';
+        if(s.mode === 'bot' && s.turn === 'black') setTimeout(botDo, 600);
     }
 
-    function handleClick(r, c) {
-        if((mode==='online' || mode==='bot') && turn !== userColor) return;
-        const p = board[r][c];
-        if(p && p.color === turn) {
-            selected = {r, c}; render();
-        } else if(selected) {
-            executeMove(selected.r, selected.c, r, c);
+    function tap(r, c) {
+        if(s.mode === 'online' && s.turn !== s.myC) return;
+        const p = s.board[r][c];
+        if(p && p.color === s.turn) {
+            if(s.must.length && !s.must.some(m => m.fR === r && m.fC === c)) return;
+            if(s.combo && (s.combo.r !== r || s.combo.c !== c)) return;
+            s.sel = {r, c}; render();
+        } else if(s.sel) {
+            move(s.sel.r, s.sel.c, r, c);
         }
     }
 
-    function executeMove(fR, fC, tR, tC) {
-        if((tR + tC) % 2 === 0 || board[tR][tC]) return;
-        const dr = tR - fR, dc = tC - fC;
-        const p = board[fR][fC];
+    function move(fR, fC, tR, tC) {
+        if((tR+tC)%2===0 || s.board[tR][tC]) return;
+        const dr = tR-fR, dc = tC-fC, p = s.board[fR][fC];
+        const absDr = Math.abs(dr);
 
-        if(Math.abs(dr) === 2) {
-            const jr = fR + dr/2, jc = fC + dc/2;
-            if(board[jr][jc] && board[jr][jc].color !== p.color) {
-                board[jr][jc] = null;
+        // Правило хода только вперед
+        if(!p.king && absDr === 1) {
+            if(p.color === 'white' && dr > 0) return;
+            if(p.color === 'black' && dr < 0) return;
+        }
+
+        let jump = false;
+        if(absDr === 2) {
+            const mR = fR+dr/2, mC = fC+dc/2;
+            if(s.board[mR][mC] && s.board[mR][mC].color !== p.color) {
+                s.board[mR][mC] = null; jump = true;
             } else return;
-        } else if(Math.abs(dr) !== 1) return;
+        } else if(absDr !== 1 || s.must.length) return;
 
-        board[tR][tC] = p;
-        board[fR][fC] = null;
-        if((p.color==='white' && tR===0) || (p.color==='black' && tR===7)) p.king = true;
+        s.board[tR][tC] = p; s.board[fR][fC] = null;
+        if((p.color==='white'&&tR===0)||(p.color==='black'&&tR===7)) p.king = true;
 
-        turn = turn === 'white' ? 'black' : 'white';
-        selected = null;
-        if(mode === 'online') db.ref('rooms/' + roomId).update({ board, turn });
+        const nextJumps = jump ? getJumps(p.color).filter(m => m.fR === tR && m.fC === tC) : [];
+        if(nextJumps.length) {
+            s.combo = {r: tR, c: tC}; s.sel = s.combo;
+        } else {
+            s.turn = s.turn === 'white' ? 'black' : 'white';
+            s.sel = null; s.combo = null;
+        }
+
+        if(s.mode === 'online') db.ref('rooms/'+s.rid).update({board: s.board, turn: s.turn});
         render();
     }
 
-    function doBot() {
-        let moves = [];
-        for(let r=0; r<8; r++)
-            for(let c=0; c<8; c++)
-                if(board[r][c]?.color === turn) {
-                    const dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
-                    dirs.forEach(([dr, dc]) => {
-                        const tr=r+dr, tc=c+dc, jr=r+dr*2, jc=c+dc*2;
-                        if(jr>=0 && jr<8 && jc>=0 && jc<8 && board[tr][tc] && board[tr][tc].color!==turn && !board[jr][jc])
-                            moves.push({fR:r, fC:c, tR:jr, tC:jc, jump:true});
-                        if(tr>=0 && tr<8 && tc>=0 && tc<8 && !board[tr][tc])
-                            if(board[r][c].king || (turn==='black' ? dr===1 : dr===-1)) moves.push({fR:r, fC:c, tR:tr, tC:tc, jump:false});
-                    });
-                }
-        const jumps = moves.filter(m => m.jump);
-        const finalMove = jumps.length ? jumps[0] : moves[Math.floor(Math.random()*moves.length)];
-        if(finalMove) executeMove(finalMove.fR, finalMove.fC, finalMove.tR, finalMove.tC);
+    function botDo() {
+        let moves = s.must.length ? s.must : [];
+        if(!moves.length) {
+            s.board.forEach((row, r) => row.forEach((p, c) => {
+                if(p?.color === 'black') [[1,1],[1,-1]].forEach(([dr, dc]) => {
+                    const tr=r+dr, tc=c+dc; 
+                    if(tr>=0&&tr<8&&tc>=0&&tc<8 && !s.board[tr][tc]) moves.push({fR:r, fC:c, tR:tr, tC:tc});
+                });
+            }));
+        }
+        const m = moves[Math.floor(Math.random()*moves.length)];
+        if(m) move(m.fR, m.fC, m.tR, m.tC);
     }
 
-    function createRoom() {
-        roomId = Math.floor(1000 + Math.random() * 8999).toString();
-        userColor = 'white'; mode = 'online';
-        board = initBoard();
-        db.ref('rooms/' + roomId).set({ board, turn: 'white', players: 1 }).then(() => {
-            db.ref('lobby/' + roomId).set(true);
-            enterGame();
-            startSync();
+    function launch(m) {
+        s.mode = m; s.lv = document.getElementById('bot-lv').value; init();
+        document.getElementById('menu-ui').style.display='none'; render();
+    }
+
+    function netCreate() {
+        s.rid = Math.floor(1000+Math.random()*8999).toString(); s.myC='white'; s.mode='online'; init();
+        db.ref('rooms/'+s.rid).set({board: s.board, turn: 'white', p:1}).then(() => {
+            db.ref('lobby/'+s.rid).set(true); sync();
+            document.getElementById('menu-ui').style.display='none';
+            document.getElementById('rid-txt').innerText="ID: "+s.rid; render();
         });
-        db.ref('rooms/' + roomId + '/players').on('value', s => { if(s.val()===2) { document.getElementById('notif').style.display='block'; }});
+        db.ref('rooms/'+s.rid+'/p').on('value', v => { if(v.val()===2) { document.getElementById('toast').style.display='block'; setTimeout(()=>document.getElementById('toast').style.display='none', 5000); }});
     }
 
-    function joinRoom(id) {
-        roomId = id; userColor = 'black'; mode = 'online';
-        db.ref('rooms/' + roomId + '/players').set(2);
-        db.ref('lobby/' + roomId).remove();
-        enterGame();
-        startSync();
+    function netJoin(id) {
+        s.rid = id; s.myC='black'; s.mode='online';
+        db.ref('rooms/'+id+'/p').set(2); db.ref('lobby/'+id).remove();
+        sync(); document.getElementById('menu-ui').style.display='none';
     }
 
-    function startSync() {
-        db.ref('rooms/' + roomId).on('value', snap => {
-            const d = snap.val();
-            if(d) { board = d.board; turn = d.turn; render(); }
-        });
-    }
-
-    function startBot() {
-        mode = 'bot';
-        userColor = document.getElementById('bot-side').value;
-        board = initBoard();
-        enterGame();
-    }
-
-    function startLocal() { mode = 'local'; board = initBoard(); enterGame(); }
-    function enterGame() { 
-        document.getElementById('start-screen').style.display = 'none'; 
-        document.getElementById('info-text').innerText = mode==='online' ? "ID: "+roomId : "VS BOT";
-        render(); 
-    }
+    function sync() { db.ref('rooms/'+s.rid).on('value', v => { const d = v.val(); if(d && d.board) { s.board = d.board; s.turn = d.turn; render(); }}); }
+    function netRefresh() { db.ref('lobby').on('value', v => { const r = document.getElementById('rooms'); r.innerHTML = ''; const d = v.val(); for(let id in d) { const b = document.createElement('button'); b.innerText="Присоединиться #"+id; b.onclick=()=>netJoin(id); r.appendChild(b); }}); }
 </script>
 </body>
 </html>
