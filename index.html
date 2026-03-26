@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Checkers Online Pro</title>
+    <title>Mega Checkers 2026</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -11,83 +11,94 @@
             --bg: #121212; --surface: #1e1e1e; --primary: #4caf50;
             --accent: #ff9800; --cell-light: #eeeed2; --cell-dark: #769656;
         }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         
-        /* Экраны меню */
-        #start-screen { position: fixed; inset: 0; background: radial-gradient(circle, #2c3e50, #000); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.5s; }
-        .menu-card { background: var(--surface); padding: 25px; border-radius: 20px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #start-screen { position: fixed; inset: 0; background: radial-gradient(circle, #2c3e50, #000); z-index: 100; display: flex; justify-content: center; align-items: center; }
+        .menu-card { background: var(--surface); padding: 20px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; border: 1px solid #333; }
         
-        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; }
-        button:active { transform: scale(0.97); }
+        .row-flex { display: flex; gap: 5px; margin-bottom: 10px; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--primary); color: white; font-size: 0.9rem; }
         .btn-sec { background: #444; }
-        .btn-orange { background: var(--accent); }
-        .btn-exit { background: #b71c1c; width: auto; padding: 5px 15px; margin: 0; }
+        select { flex: 1; padding: 10px; border-radius: 8px; background: #333; color: white; border: 1px solid #555; }
 
-        /* Лобби */
-        #room-list { background: #111; border-radius: 10px; margin: 10px 0; max-height: 200px; overflow-y: auto; border: 1px solid #222; }
-        .room-item { padding: 12px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .room-item button { width: auto; margin: 0; padding: 6px 15px; font-size: 0.8rem; }
-
-        /* Игровое поле */
-        #status-bar { background: var(--surface); padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
-        #game-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 5px; }
-        #board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; aspect-ratio: 1/1; max-width: 500px; border: 4px solid #333; }
+        #status-bar { width: 100%; background: var(--surface); padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; box-sizing: border-box; }
+        #game-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; width: 100%; overflow: hidden; }
         
-        .cell { aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; }
+        /* Исправленная доска без полос */
+        #board { 
+            display: grid; 
+            grid-template-columns: repeat(8, 1fr); 
+            grid-template-rows: repeat(8, 1fr);
+            width: 95vw; 
+            max-width: 500px; 
+            aspect-ratio: 1 / 1; /* Гарантирует квадрат без полос */
+            border: 4px solid #333; 
+            background: #333;
+        }
+        
+        .cell { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .white-c { background: var(--cell-light); }
         .black-c { background: var(--cell-dark); }
         .selected { background: #f7e03c !important; }
         
-        .piece { width: 82%; height: 82%; border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.4); z-index: 5; }
+        .piece { 
+            width: 80%; 
+            height: 80%; 
+            border-radius: 50%; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4); 
+            transition: transform 0.2s;
+        }
         .p-white { background: radial-gradient(circle at 30% 30%, #fff, #bbb); border: 1px solid #999; }
         .p-black { background: radial-gradient(circle at 30% 30%, #444, #111); border: 1px solid #111; }
-        .king::after { content: '👑'; font-size: 1.2rem; color: gold; display: flex; justify-content: center; align-items: center; height: 100%; }
+        .king::after { content: '👑'; font-size: 1.2rem; display: flex; justify-content: center; align-items: center; height: 100%; }
         
         .hidden { display: none !important; }
-        select { width: 100%; padding: 12px; border-radius: 8px; background: #333; color: white; margin-bottom: 10px; border: 1px solid #555; }
     </style>
 </head>
 <body>
 
     <div id="start-screen">
         <div class="menu-card">
-            <h1 style="color:var(--primary)">ШАШКИ 2026</h1>
-            
+            <h2 style="color:var(--primary); margin-top:0;">MEGA CHECKERS 2026</h2>
             <div id="main-m">
                 <button onclick="startLocal()">Играть вдвоем</button>
-                <button onclick="showS('bot-m')" class="btn-sec">Против Бота</button>
-                <button onclick="showS('online-m')" class="btn-orange">Игра по сети</button>
+                <button onclick="showS('bot-m')" class="btn-sec">Играть с ботом</button>
+                <button onclick="showS('online-m')" style="background:var(--accent)">Игра по сети</button>
             </div>
-
+            
             <div id="bot-m" class="hidden">
-                <select id="bot-lvl">
-                    <option value="1">Легко (Нубик)</option>
-                    <option value="2">Средне (Мастер)</option>
-                    <option value="3">Профи (Кошмар)</option>
-                </select>
-                <button onclick="startBot()">Начать</button>
+                <div class="row-flex">
+                    <select id="bot-lvl">
+                        <option value="1">Легкий</option>
+                        <option value="2">Мастер</option>
+                        <option value="3">Профи</option>
+                    </select>
+                    <select id="user-side">
+                        <option value="white">Я Белые</option>
+                        <option value="black">Я Черные</option>
+                    </select>
+                </div>
+                <button onclick="startBot()">Начать игру</button>
                 <button class="btn-sec" onclick="showS('main-m')">Назад</button>
             </div>
 
             <div id="online-m" class="hidden">
                 <button onclick="createRoom()">+ Создать комнату</button>
-                <p style="font-size: 0.8rem; margin: 10px 0; color: #888;">Доступные игры:</p>
-                <div id="room-list">Загрузка...</div>
+                <div id="room-list" style="margin: 10px 0; max-height: 150px; overflow-y: auto; background:#111; border-radius:10px;"></div>
                 <button class="btn-sec" onclick="showS('main-m')">Назад</button>
             </div>
         </div>
     </div>
 
     <div id="status-bar">
-        <button class="btn-exit" onclick="location.reload()">Меню</button>
-        <span id="turn-text">Ход Белых</span>
-        <span id="room-id-display" style="font-weight:bold; color:var(--accent)"></span>
+        <button onclick="location.reload()" style="width:auto; padding:5px 12px; background:#b71c1c; border-radius:5px; border:none; color:white; font-weight:bold;">ВЫХОД</button>
+        <span id="turn-text" style="font-weight:bold;">Ход Белых</span>
+        <span id="room-info" style="color:var(--accent); font-weight:bold;"></span>
     </div>
     
     <div id="game-container"><div id="board"></div></div>
 
 <script>
-    // КОНФИГУРАЦИЯ С ИСПРАВЛЕННЫМ URL ДЛЯ БЕЛЬГИИ
     const firebaseConfig = {
         apiKey: "AIzaSyCFJQ4OKKStxVW7gUj1lS4KHwxGc1_QIwg",
         authDomain: "mymobilegame-b5e68.firebaseapp.com",
@@ -117,57 +128,62 @@
         db.ref('lobby').on('value', snap => {
             listEl.innerHTML = '';
             const data = snap.val();
-            if(!data) { listEl.innerHTML = "<div style='padding:10px;'>Комнат нет</div>"; return; }
+            if(!data) { listEl.innerHTML = "<div style='padding:10px; color:#555;'>Нет свободных комнат</div>"; return; }
             for(let id in data) {
                 const item = document.createElement('div');
-                item.className = 'room-item';
-                item.innerHTML = `<span>Комната #${id}</span><button onclick="joinRoom('${id}')">Вход</button>`;
+                item.style = "display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #222;";
+                item.innerHTML = `<span>Комната #${id}</span><button style="width:auto; padding:5px 15px;" onclick="joinRoom('${id}')">Вход</button>`;
                 listEl.appendChild(item);
             }
-        }, err => {
-            listEl.innerHTML = "Ошибка сети!";
         });
     }
 
     function createRoom() {
         roomId = Math.floor(1000 + Math.random() * 8999).toString();
         userColor = 'white'; mode = 'online';
-        initData();
-        enterGame();
-        render();
-
+        initBoard(); enterGame();
         db.ref('rooms/' + roomId).set({ board, turn: 'white' });
         db.ref('lobby/' + roomId).set({ status: 'waiting' });
-        startOnlineSync();
+        startSync();
     }
 
     function joinRoom(id) {
         roomId = id; userColor = 'black'; mode = 'online';
-        db.ref('lobby/' + roomId).remove(); 
-        enterGame();
-        startOnlineSync();
+        db.ref('lobby/' + roomId).remove(); enterGame();
+        startSync();
     }
+
+    function startBot() {
+        mode = 'bot'; 
+        botLvl = parseInt(document.getElementById('bot-lvl').value);
+        userColor = document.getElementById('user-side').value;
+        initBoard(); enterGame(); render();
+    }
+
+    function startLocal() { mode = 'local'; initBoard(); enterGame(); render(); }
 
     function enterGame() {
-        document.getElementById('start-screen').style.transform = 'translateY(-100%)';
-        document.getElementById('room-id-display').innerText = "ID: " + roomId;
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('room-info').innerText = roomId ? "ID: "+roomId : "";
     }
 
-    function startOnlineSync() {
+    function startSync() {
         db.ref('rooms/' + roomId).on('value', snap => {
             const data = snap.val();
             if(data) { board = data.board; turn = data.turn; render(); }
         });
     }
 
-    function initData() {
+    function initBoard() {
         board = Array(8).fill().map(() => Array(8).fill(null));
-        for(let r=0; r<8; r++)
-            for(let c=0; c<8; c++)
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
                 if((r+c)%2!==0) {
                     if(r<3) board[r][c] = {color:'black', king:false};
                     else if(r>4) board[r][c] = {color:'white', king:false};
                 }
+            }
+        }
     }
 
     function render() {
@@ -181,25 +197,26 @@
                 const cell = document.createElement('div');
                 cell.className = `cell ${(r+c)%2===0?'white-c':'black-c'}`;
                 if(selected?.r===r && selected?.c===c) cell.classList.add('selected');
+                
                 if(board[r][c]) {
-                    const p = document.createElement('div');
-                    p.className = `piece p-${board[r][c].color} ${board[r][c].king?'king':''}`;
-                    cell.appendChild(p);
+                    const pEl = document.createElement('div');
+                    pEl.className = `piece p-${board[r][c].color} ${board[r][c].king?'king':''}`;
+                    cell.appendChild(pEl);
                 }
                 cell.onclick = () => handleClick(r, c);
                 bEl.appendChild(cell);
             }
         }
-        document.getElementById('turn-text').innerText = turn==='white'?'Ход: БЕЛЫЕ':'Ход: ЧЕРНЫЕ';
-        if(mode==='bot' && turn!==userColor) setTimeout(doBot, 600);
+        document.getElementById('turn-text').innerText = turn==='white'?'Ход Белых':'Ход Черных';
+        if(mode==='bot' && turn!==userColor) setTimeout(doBot, 700);
     }
 
     function handleClick(r, c) {
         if((mode==='bot' || mode==='online') && turn !== userColor) return;
         const p = board[r][c];
         if(p && p.color === turn) {
-            const moves = getMoves(turn);
-            if(mustJump && !moves.some(m => m.r===r && m.c===c && m.isJump)) return;
+            const ms = getMoves(turn);
+            if(mustJump && !ms.some(m => m.r===r && m.c===c && m.isJump)) return;
             selected = {r, c}; render();
         } else if(selected) {
             const move = getPieceMoves(selected.r, selected.c).find(m => m.toR===r && m.toC===c);
@@ -213,6 +230,7 @@
         board[move.toR][move.toC] = p;
         board[move.r][move.c] = null;
         if(move.isJump) board[move.jumpR][move.jumpC] = null;
+        
         if((move.toR===0 && p.color==='white') || (move.toR===7 && p.color==='black')) p.king = true;
 
         if(move.isJump && getPieceMoves(move.toR, move.toC).some(m => m.isJump)) {
@@ -223,7 +241,7 @@
         }
         if(mode==='online') db.ref('rooms/' + roomId).set({ board, turn });
         render();
-        checkGameOver();
+        checkWin();
     }
 
     function getMoves(color) {
@@ -239,7 +257,15 @@
         const p = board[r][c], moves = [], dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
         dirs.forEach(([dr, dc]) => {
             let nr = r+dr, nc = c+dc;
-            if(p.king) {
+            if(!p.king) {
+                if(!mustJump && nr>=0 && nr<8 && nc>=0 && nc<8 && !board[nr][nc]) {
+                    if((p.color==='white' && dr===-1) || (p.color==='black' && dr===1)) moves.push({r,c,toR:nr,toC:nc,isJump:false});
+                }
+                const nnr=r+dr*2, nnc=c+dc*2;
+                if(nnr>=0 && nnr<8 && nnc>=0 && nnc<8 && board[nr][nc] && board[nr][nc].color!==p.color && !board[nnr][nnc])
+                    moves.push({r,c,toR:nnr,toC:nnc,isJump:true,jumpR:nr,jumpC:nc});
+            } else {
+                // Логика дамки
                 let enemy = false, jr, jc;
                 while(nr>=0 && nr<8 && nc>=0 && nc<8) {
                     const t = board[nr][nc];
@@ -253,13 +279,6 @@
                     }
                     nr+=dr; nc+=dc;
                 }
-            } else {
-                if(!mustJump && nr>=0 && nr<8 && nc>=0 && nc<8 && !board[nr][nc]) {
-                    if((p.color==='white' && dr===-1) || (p.color==='black' && dr===1)) moves.push({r,c,toR:nr,toC:nc,isJump:false});
-                }
-                const nnr=r+dr*2, nnc=c+dc*2;
-                if(nnr>=0 && nnr<8 && nnc>=0 && nnc<8 && board[nr][nc] && board[nr][nc].color!==p.color && !board[nnr][nnc])
-                    moves.push({r,c,toR:nnr,toC:nnc,isJump:true,jumpR:nr,jumpC:nc});
             }
         });
         return moves;
@@ -268,21 +287,17 @@
     function doBot() {
         const ms = getMoves(turn);
         if(!ms.length) return;
-        ms.sort((a,b) => (b.isJump ? 10 : 0) - (a.isJump ? 10 : 0));
-        const finalMove = botLvl == 1 ? ms[Math.floor(Math.random()*ms.length)] : ms[0];
-        executeMove(finalMove);
+        if(botLvl === 3) ms.sort((a,b) => (b.isJump?1:0) - (a.isJump?1:0));
+        const move = botLvl === 1 ? ms[Math.floor(Math.random()*ms.length)] : ms[0];
+        executeMove(move);
     }
 
-    function checkGameOver() {
+    function checkWin() {
         if(getMoves(turn).length === 0) {
-            alert("Победа: " + (turn === 'white' ? "Черных" : "Белых"));
+            alert("Игра окончена! Победили " + (turn==='white'?'Черные':'Белые'));
             location.reload();
         }
     }
-
-    function startLocal() { mode='local'; initData(); enterGame(); render(); }
-    function startBot() { mode='bot'; botLvl = document.getElementById('bot-lvl').value; userColor = 'white'; initData(); enterGame(); render(); }
-
 </script>
 </body>
 </html>
