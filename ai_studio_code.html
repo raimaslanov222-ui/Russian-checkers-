@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TWA AI Assistant</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Tailwind CSS для стилизации -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #070b10;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen select-none overflow-hidden">
+
+  <!-- Header -->
+  <header class="bg-[#10161e] border-b border-[#1c2734] p-4 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center font-bold text-neutral-950 text-sm">ИИ</div>
+      <div>
+        <h1 id="user-name" class="text-xs font-bold leading-none">Telegram Web App</h1>
+        <p class="text-[10px] text-neutral-400">Панель управления ИИ</p>
+      </div>
+    </div>
+    <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] rounded-full font-bold uppercase tracking-wider">TWA Active</span>
+  </header>
+
+  <!-- Chat Log Box -->
+  <main id="chat-box" class="flex-grow overflow-y-auto p-4 space-y-4">
+    <div class="flex flex-col items-start">
+      <div class="bg-[#10161e] text-neutral-300 text-xs rounded-2xl rounded-tl-none p-3 max-w-[85%] border border-[#1c2734]">
+        Привет! Напиши мне что-нибудь или воспользуйся голосовым вводом через микрофон! 🎤
+      </div>
+    </div>
+  </main>
+
+  <!-- Input Area bar -->
+  <footer class="bg-[#10161e] border-t border-[#1c2734] p-3 flex gap-2 items-center">
+    <!-- Кнопка микрофона -->
+    <button id="mic-btn" class="p-3 bg-[#070b10] border border-[#1c2734] text-neutral-300 rounded-xl transition hover:border-amber-500 focus:outline-none">
+      🎤
+    </button>
+    
+    <!-- Текстовое поле ввода -->
+    <input 
+      type="text" 
+      id="prompt-input" 
+      placeholder="Спросить ИИ-Ассистента..." 
+      class="flex-1 bg-[#070b10] border border-[#1c2734] focus:border-amber-500 rounded-xl px-4 py-3 text-xs text-white focus:outline-none"
+    />
+
+    <!-- Кнопка отправить -->
+    <button id="send-btn" class="bg-[#1b88e1] hover:bg-blue-400 text-white p-3 px-4 rounded-xl transition font-black text-xs">
+      ОТПРАВИТЬ
+    </button>
+  </footer>
+
+  <script>
+    // Инициализация Telegram SDK
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      
+      // Вытягиваем имя пользователя из Telegram
+      const user = tg.initDataUnsafe?.user;
+      if (user) {
+        document.getElementById('user-name').innerText = `${user.first_name || 'Пользователь'}`;
+      }
+    }
+
+    // Пример добавления реплик на экран
+    const chatBox = document.getElementById('chat-box');
+    const input = document.getElementById('prompt-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    sendBtn.addEventListener('click', () => {
+      const text = input.value.trim();
+      if (!text) return;
+      
+      // Отображаем сообщение пользователя
+      const userBubble = document.createElement('div');
+      userBubble.className = 'flex flex-col items-end';
+      userBubble.innerHTML = `
+        <div class="bg-[#1b88e1] text-white text-xs rounded-2xl rounded-tr-none p-3 max-w-[85%]">
+          ${text}
+        </div>
+      `;
+      chatBox.appendChild(userBubble);
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  </script>
+</body>
+</html>
